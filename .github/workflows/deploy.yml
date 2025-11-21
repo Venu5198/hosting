@@ -10,31 +10,36 @@ jobs:
     permissions:
       contents: read
       id-token: write
+
     steps:
-      - name: Checkout
+      - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v1
-        with:
-          project_id: kxnwork
-
-      - name: Authenticate to GCP using Workload Identity Federation
+      - name: Authenticate to GCP via WIF
         uses: google-github-actions/auth@v1
         with:
           workload_identity_provider: "projects/382207431122/locations/global/workloadIdentityPools/github-wif-999111/providers/github-provider"
           service_account: "github-actions@kxnwork.iam.gserviceaccount.com"
 
-      - name: Fetch deploy SSH key from Secret Manager
-        id: fetchkey
+      - name: Install gcloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: kxnwork
+
+      - name: Fetch SSH private key from Secret Manager
         run: |
           gcloud secrets versions access latest --secret="ssh-deploy-key" > deploy_key
           chmod 600 deploy_key
-          echo "SSH key fetched"
 
       - name: Run deploy script on VM
         env:
           VM_USER: sj5384763
           VM_IP: ${{ secrets.VM_IP }}
         run: |
-          ssh -o StrictHostKeyChecking=no -i deploy_key $VM_USER@$VM_IP "bash -s" < ./deploy.sh
+          if [ -z "$VM_IP" ]; then
+            echo "ERROR: VM_IP secret is not set in GitHub secrets."
+            exit 1
+          fi
+
+          echo "Deploying to $VM_USER@$VM_IP ..."
+          ssh -o StrictHostKeyChecking=no -i deploy_key "$VM_USER@$VM_IP" "bash -s" < ./deploy.sh
