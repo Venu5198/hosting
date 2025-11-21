@@ -23,7 +23,7 @@ jobs:
         uses: google-github-actions/auth@v1
         with:
           workload_identity_provider: "projects/382207431122/locations/global/workloadIdentityPools/github-wif-999111/providers/github-provider"
-          service_account: "github-actions-sa@kxnwork.iam.gserviceaccount.com"
+          service_account: "github-actions@kxnwork.iam.gserviceaccount.com"
 
       - name: Fetch deploy SSH key from Secret Manager
         id: fetchkey
