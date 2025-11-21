@@ -15,7 +15,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Authenticate to GCP via WIF
+      - name: Authenticate to GCP via WIF (OIDC)
         uses: google-github-actions/auth@v1
         with:
           workload_identity_provider: "projects/382207431122/locations/global/workloadIdentityPools/github-wif-999111/providers/github-provider"
@@ -26,12 +26,16 @@ jobs:
         with:
           project_id: kxnwork
 
+      - name: Ensure ssh client present
+        run: sudo apt-get update && sudo apt-get install -y openssh-client
+
       - name: Fetch SSH private key from Secret Manager
         run: |
           gcloud secrets versions access latest --secret="ssh-deploy-key" > deploy_key
           chmod 600 deploy_key
+          echo "SSH key fetched"
 
-      - name: Run deploy script on VM
+      - name: Run deploy script on VM (SSH)
         env:
           VM_USER: sj5384763
           VM_IP: ${{ secrets.VM_IP }}
@@ -40,6 +44,6 @@ jobs:
             echo "ERROR: VM_IP secret is not set in GitHub secrets."
             exit 1
           fi
-
           echo "Deploying to $VM_USER@$VM_IP ..."
           ssh -o StrictHostKeyChecking=no -i deploy_key "$VM_USER@$VM_IP" "bash -s" < ./deploy.sh
+
